@@ -196,6 +196,6 @@ public class CurlRenderer implements GLSurfaceView.Renderer {
         mPageRect.top += mViewRect.height() * mMargins.top;
         mPageRect.bottom -= mViewRect.height() * mMargins.bottom;
 
-        Log.d("CurlRender", ">>>update page rects: " + mPageRect);
+//        Log.d("CurlRender", ">>>update page rects: " + mPageRect);
     }
 }

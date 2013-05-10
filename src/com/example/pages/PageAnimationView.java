@@ -3,8 +3,11 @@ package com.example.pages;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
+import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLUtils;
@@ -53,8 +56,15 @@ public class PageAnimationView extends TextureView implements TextureView.Surfac
     }
 
     public void startAnimation() {
+        if(renderRunnable==null){
+            return;
+        }
+
         targetView.setDrawingCacheEnabled(true);
         Bitmap texture = Bitmap.createBitmap(targetView.getDrawingCache());
+//        Bitmap.Config conf = Bitmap.Config.ARGB_8888; // see other conf types
+//        Bitmap texture = Bitmap.createBitmap(1, 1, conf); // this creates a MUTABLE bitmap
+//        Canvas canvas = new Canvas(texture);
         renderRunnable.setTexture(texture);
         targetView.setDrawingCacheEnabled(false);
 
@@ -96,7 +106,16 @@ public class PageAnimationView extends TextureView implements TextureView.Surfac
     }
 
     @Override
-    public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+    public boolean onSurfaceTextureDestroyed(final SurfaceTexture surfaceTexture) {
+//        Log.e("pagedemo","====>>>>>surface destroyed, thread: "+Thread.currentThread());
+//
+//        renderRunnable.handler.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                surfaceTexture.release();
+//            }
+//        });
+
         return true;
     }
 
@@ -125,6 +144,8 @@ public class PageAnimationView extends TextureView implements TextureView.Surfac
 
         int width, height;
 
+        private boolean isEnd;
+
         RenderRunnable(SurfaceTexture surfaceTexture) {
             this.surfaceTexture = surfaceTexture;
         }
@@ -144,6 +165,12 @@ public class PageAnimationView extends TextureView implements TextureView.Surfac
 
         @Override
         public void run() {
+
+            ActivityManager actvityManager = (ActivityManager) ((Activity)getContext()).getSystemService( Activity.ACTIVITY_SERVICE );
+            ActivityManager.MemoryInfo mInfo = new ActivityManager.MemoryInfo ();
+            actvityManager.getMemoryInfo( mInfo );
+//            Log.v("pagedemo",">>>>>>momory: " + mInfo.availMem/1024/1024+"M");
+
             initGL();
 
             renderer = new CurlRenderer();
@@ -156,31 +183,34 @@ public class PageAnimationView extends TextureView implements TextureView.Surfac
             Looper.prepare();
             handler = new Handler();
             Looper.loop();
+
+//            Log.d("pagedemo","render thread quit");
         }
 
         public void render() {
             handler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if(isEnd){
+                        return;
+                    }
+
                     renderer.onDrawFrame(null);
 
                     if (!egl.eglSwapBuffers(eglDisplay, eglSurface)) {
-                        throw new RuntimeException("Cannot swap buffers");
+                        //throw new RuntimeException("Cannot swap buffers");
+//                        Log.e("pagedemo","Cannot swap buffers");
                     }
                 }
             });
         }
 
-        public void changeSize(final int width, final int height) {
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    renderer.onSurfaceChanged(null, width, height);
-                }
-            });
-        }
-
         private void initGL() {
+//            try {
+//                Thread.sleep(100);
+//            } catch (InterruptedException e) {
+//
+//            }
             egl = (EGL10) EGLContext.getEGL();
 
             eglDisplay = egl.eglGetDisplay(EGL10.EGL_DEFAULT_DISPLAY);
@@ -221,6 +251,8 @@ public class PageAnimationView extends TextureView implements TextureView.Surfac
 
 //            gl = eglContext.getGL();
 
+//            Log.d("pagedemo",">>>>init gl, thread: "+Thread.currentThread());
+
         }
 
         EGLConfig chooseEglConfig() {
@@ -258,19 +290,32 @@ public class PageAnimationView extends TextureView implements TextureView.Surfac
         }
 
         void quit() {
+            if(handler==null){
+                return;
+            }
             handler.post(new Runnable() {
                 @Override
                 public void run() {
-                    egl.eglDestroyContext(eglDisplay, eglContext);
-                    egl.eglDestroySurface(eglDisplay, eglSurface);
+//                    Log.d("pagedemo",">>>>>quit renderer");
+//                    renderer.getMesh().resetTexture();
                     handler.getLooper().quit();
+                    isEnd=true;
+
+                    surfaceTexture.release();
+
+                    egl.eglMakeCurrent(eglDisplay, EGL10.EGL_NO_SURFACE,EGL10.EGL_NO_SURFACE,EGL10.EGL_NO_CONTEXT);
+                    egl.eglDestroySurface(eglDisplay, eglSurface);
+                    egl.eglDestroyContext(eglDisplay, eglContext);
+//                    egl.eglTerminate(eglDisplay);
                 }
             });
         }
     }
 
     public void onPause() {
-        renderRunnable.quit();
+        if(renderRunnable!=null){
+            renderRunnable.quit();
+        }
     }
 
     public void setAnimationListener(Animator.AnimatorListener listener) {

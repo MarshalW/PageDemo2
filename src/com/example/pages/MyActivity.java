@@ -74,9 +74,14 @@ public class MyActivity extends Activity {
 
     @Override
     protected void onPause() {
+        ViewGroup rootView = (ViewGroup) findViewById(R.id.rootView);
+        rootView.removeAllViews();
+
         for (PageAnimationView view : views) {
             view.onPause();
         }
+        views.clear();
+
         super.onPause();
     }
 }

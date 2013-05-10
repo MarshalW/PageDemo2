@@ -530,18 +530,6 @@ public class CurlMesh {
     public synchronized void onDrawFrame(CurlShader shaderTexture,
                                          CurlShader shaderShadow) {
 
-//        Log.d("CurlMesh.Draw",">>>vertices count front -->>"+mVerticesCountFront+",count back -->>"+mVerticesCountBack);
-
-//        Log.d("CurlMesh.draw",">>>>>on draw frame");
-        // First allocate texture if there is not one yet.
-
-        StringBuilder builder=new StringBuilder();
-        for(int i=0;i<mBufTexCoords.limit();i++){
-            builder.append(mBufTexCoords.get(i)).append(",");
-        }
-
-        Log.d("CurlMesh.DrawPix", ">>>" + builder.toString());
-
         if (mTextureIds == null) {
             // Generate texture.
             mTextureIds = new int[2];
@@ -580,9 +568,6 @@ public class CurlMesh {
 
             mTexturePage.recycle();
 //            reset();
-
-//            Log.d("CurlMesh.texture", "****** set text image 2d, bmp: " + texture.getRowBytes());
-
 
         }
 
@@ -705,6 +690,9 @@ public class CurlMesh {
      * requested on next render.
      */
     public synchronized void resetTexture() {
+//        if (mTextureIds != null) {
+//            GLES20.glDeleteTextures(mTextureIds.length, mTextureIds, 0);
+//        }
         mTextureIds = null;
     }
 
